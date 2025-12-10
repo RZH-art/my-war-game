@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诸侯争霸 - 双人对战</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e6e6e6;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        /* 顶部信息栏 */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid #2a3a5a;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            min-width: 250px;
+        }
+
+        .player-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .player1 { background: #4CAF50; }
+        .player2 { background: #F44336; }
+
+        .resources {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .resources i {
+            margin-right: 5px;
+            color: #FFD700;
+        }
+
+        .game-info {
+            text-align: center;
+        }
+
+        .turn-indicator {
+            font-size: 18px;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 5px;
+        }
+
+        .connection-status {
+            font-size: 12px;
+            color: #4CAF50;
+        }
+
+        /* 主区域 */
+        .main-area {
+            display: flex;
+            flex: 1;
+            gap: 15px;
+            min-height: 0;
+        }
+
+        /* 地图容器 */
+        .map-container {
+            flex: 3;
+            background: #0f1729;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #2a3a5a;
+        }
+
+        .map {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #1e3c72 0%, #2a5298 100%);
+            position: relative;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #2a3a5a;
+            min-width: 320px;
+        }
+
+        .panel-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 5px;
+            background: transparent;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+
+        .tab-btn.active {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .panel-content {
+            flex: 1;
+            display: none;
+            overflow-y: auto;
+        }
+
+        .panel-content.active {
+            display: block;
+        }
+
+        .city-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            min-height: 150px;
+        }
+
+        .city-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #2a3a5a 0%, #1e3c72 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 状态栏 */
+        .status-bar {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid #2a3a5a;
+        }
+
+        .status-message {
+            color: #FFD700;
+            font-size: 14px;
+        }
+
+        /* === 新增：联机模态框样式 === */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a3a5a 100%);
+            padding: 25px;
+            border-radius: 16px;
+            min-width: 450px;
+            max-width: 500px;
+            border: 2px solid #4CAF50;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .modal-content h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .connection-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .form-group input[type="text"] {
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #2a3a5a;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+        }
+
+        .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .connection-status-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .connection-status-box h4 {
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+
+        #online-message-log {
+            height: 100px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        #online-message-log div {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .cancel-btn {
+            padding: 12px 20px;
+            background: #666;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        .cancel-btn:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <!-- 游戏主容器 -->
+    <div class="game-container">
+        <!-- 顶部信息栏 -->
+        <div class="top-bar">
+            <div class="player-info" id="player1-info">
+                <div class="player-color player1"></div>
+                <span id="player1-name">玩家1</span>
+                <div class="resources">
+                    <span><i class="fas fa-bread-slice"></i> <span id="p1-food">1000</span></span>
+                    <span><i class="fas fa-coins"></i> <span id="p1-gold">500</span></span>
+                    <span><i class="fas fa-users"></i> <span id="p1-pop">2000</span></span>
+                </div>
+            </div>
+            
+            <div class="game-info">
+                <div class="turn-indicator" id="turn-indicator">第 <span id="turn">1</span> 回合</div>
+                <div class="connection-status" id="connection-status">准备联机</div>
+            </div>
+            
+            <div class="player-info" id="player2-info">
+                <div class="player-color player2"></div>
+                <span id="player2-name">玩家2</span>
+                <div class="resources">
+                    <span><i class="fas fa-bread-slice"></i> <span id="p2-food">1000</span></span>
+                    <span><i class="fas fa-coins"></i> <span id="p2-gold">500</span></span>
+                    <span><i class="fas fa-users"></i> <span id="p2-pop">2000</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 游戏主区域 -->
+        <div class="main-area">
+            <!-- 地图区域 -->
+            <div class="map-container">
+                <div class="map" id="game-map">
+                    <!-- 地图将由 game.js 动态生成 -->
+                </div>
+            </div>
+            
+            <!-- 侧边栏控制面板 -->
+            <div class="control-panel">
+                <div class="panel-tabs">
+                    <button class="tab-btn active" data-tab="city"><i class="fas fa-city"></i> 城市</button>
+                    <button class="tab-btn" data-tab="military"><i class="fas fa-shield-alt"></i> 军事</button>
+                    <button class="tab-btn" data-tab="diplomacy"><i class="fas fa-handshake"></i> 外交</button>
+                </div>
+                
+                <!-- 城市管理面板 -->
+                <div class="panel-content active" id="city-panel">
+                    <h3 id="selected-city-name">选择城市</h3>
+                    <div class="city-info" id="city-info">
+                        <p>点击地图上的城市查看详情</p>
+                    </div>
+                    <div class="city-actions">
+                        <button class="action-btn recruit-btn" disabled><i class="fas fa-user-plus"></i> 征兵</button>
+                        <button class="action-btn move-btn" disabled><i class="fas fa-exchange-alt"></i> 调兵</button>
+                        <button class="action-btn build-btn" disabled><i class="fas fa-hammer"></i> 建造</button>
+                        <button class="action-btn upgrade-btn" disabled><i class="fas fa-arrow-up"></i> 升级</button>
+                    </div>
+                </div>
+                
+                <!-- 军事面板 -->
+                <div class="panel-content" id="military-panel">
+                    <h3>军事行动</h3>
+                    <div class="military-info">
+                        <p>选择城市后，可进行军事操作</p>
+                    </div>
+                </div>
+                
+                <!-- 外交面板 -->
+                <div class="panel-content" id="diplomacy-panel">
+                    <h3>外交关系</h3>
+                    <div class="message-box">
+                        <h4>消息记录</h4>
+                        <div class="messages" id="message-log"></div>
+                        <div class="message-input">
+                            <input type="text" id="message-input" placeholder="发送消息..." style="width:100%; padding:8px; margin-top:10px;">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 回合控制 -->
+                <div class="turn-control">
+                    <button id="end-turn-btn" class="action-btn" style="width:100%; margin-top:20px; background:#F44336;">
+                        <i class="fas fa-forward"></i> 结束回合
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部状态栏 -->
+        <div class="status-bar">
+            <div class="status-message" id="status-message">欢迎来到诸侯争霸！点击地图上的城市开始游戏。</div>
+        </div>
+    </div>
+
+    <!-- =============== 新增：联机对战设置模态框 =============== -->
+    <div class="modal" id="online-modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-wifi"></i> 联机对战设置</h2>
+            <div class="connection-form">
+                <div class="form-group">
+                    <label for="room-id-input">创建房间：</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="room-id-input" value="room_" style="flex: 1;">
+                        <button id="create-room-btn" class="action-btn" style="white-space:nowrap;">创建房间</button>
+                    </div>
+                    <p style="font-size: 12px; color: #aaa; margin-top: 5px;">创建后，将生成的完整链接分享给朋友。</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="join-room-input">加入房间：</label>
+                    <div style="display: flex; gap: 10px; margin-bottom:10px;">
+                        <input type="text" id="join-room-input" placeholder="在此粘贴朋友分享的链接" style="flex: 1;">
+                        <button id="join-room-btn" class="action-btn" style="white-space:nowrap;">加入房间</button>
+                    </div>
+                </div>
+                
+                <div class="connection-status-box">
+                    <h4>连接状态</h4>
+                    <p id="connection-status-text" style="color:#4CAF50;">准备连接</p>
+                    <div id="online-message-log">
+                        <!-- 联机日志将显示在这里 -->
+                    </div>
+                </div>
+                
+                <button id="close-online-btn" class="cancel-btn" style="margin-top: 15px;">关闭面板</button>
+            </div>
+        </div>
+    </div>
+    <!-- =============== 联机模态框结束 =============== -->
+
+    <!-- 引入Socket.io库（用于实时通信） -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- 游戏主逻辑 -->
+    <script src="game.js"></script>
+</body>
+</html>
