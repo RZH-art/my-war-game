@@ -41,7 +41,7 @@ class OnlineManager {
     connectToSignalingServer() {
         // 使用一个免费的公共测试服务器（注意：不稳定，仅用于测试）
         // 实际使用时需要部署自己的，见下文部署步骤
-        this.socket = io('https://simple-signal-server.onrender.com');
+        this.socket = io('https://my-signal-server-jzwt.vercel.app'); // 请替换成你截图中的真实地址
         
         this.socket.on('connect', () => {
             this.log('已连接到信令服务器');
